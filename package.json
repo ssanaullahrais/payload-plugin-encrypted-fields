@@ -1,0 +1,20 @@
+{
+  "name": "payload-plugin-encrypted-fields",
+  "version": "0.1.0",
+  "description": "Payload CMS field type for storing third-party API credentials encrypted at rest, that never return the real value through any read path (REST/GraphQL/Local API/admin UI) once saved — only a masked placeholder or the decrypted value read back internally by your own server code.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.tsx",
+    "./mask": "./src/mask.ts"
+  },
+  "peerDependencies": {
+    "@payloadcms/ui": "^3.0.0",
+    "payload": "^3.0.0",
+    "react": "^19.0.0"
+  }
+}
