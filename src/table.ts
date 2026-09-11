@@ -15,7 +15,9 @@ interface QueryableSQLiteClient {
 }
 
 export function camelToSnakeCase(name: string): string {
-  return name.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
+  return name
+    .replace(/-/g, "_")
+    .replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
 }
 
 function assertIdentifier(identifier: string, kind: "column" | "table"): void {
