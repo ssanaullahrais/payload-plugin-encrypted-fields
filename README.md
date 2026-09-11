@@ -1,4 +1,4 @@
-# payload-plugin-encrypted-fields
+# Payload Plugin - Encrypted Global Fields
 
 This is a field type for Payload CMS. It lets you store secrets safely, like API keys or passwords.
 
