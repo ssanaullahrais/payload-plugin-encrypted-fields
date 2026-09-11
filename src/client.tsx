@@ -16,7 +16,7 @@ export function EncryptedFieldInput({
   field,
 }: {
   path?: string
-  field?: { admin?: { description?: string }; label?: string; name?: string }
+  field?: { admin?: { description?: string; width?: string }; label?: string; name?: string }
 }) {
   const { value, setValue, initialValue } = useField<string>({ path })
   const [touched, setTouched] = React.useState(false)
@@ -24,7 +24,13 @@ export function EncryptedFieldInput({
   const label = field?.label ?? field?.name ?? "Secret"
 
   return (
-    <div className="field-type text" style={{ marginBottom: 0, width: "100%" }}>
+    <div
+      className="field-type text"
+      style={{
+        marginBottom: 0,
+        width: field?.admin?.width ?? "100%",
+      }}
+    >
       <FieldLabel label={label} path={path} />
       <input
         type="password"
