@@ -12,11 +12,20 @@ export interface EncryptedFieldOptions {
     /** Normal Payload admin field width, e.g. "50%" inside a row. */
     width?: string
   }
-  /** Defaults to admin-only (`req.user?.role === "admin"` if a `role` field exists, else any logged-in user). */
+  /** Defaults to any logged-in user (`Boolean(req.user)`). This only gates who can see the masked placeholder — the real value never comes back through this field regardless of access. */
   access?: {
     read?: FieldAccess
   }
-  /** DB column name override — defaults to the snake_case of the field name. */
+  /**
+   * DB column name override — defaults to the snake_case of the field name.
+   *
+   * Required (don't rely on the default) when this field is nested inside a
+   * `group`, `row`, `tabs`, or `array` — Payload prefixes the underlying SQL
+   * column with the parent path (e.g. a field named `apiKey` inside a group
+   * named `emailDelivery` becomes column `email_delivery_api_key`), but this
+   * option only ever sees the field's own name, not its ancestors, so it
+   * can't derive that prefix for you.
+   */
   column?: string
   /** Returns the server-only encryption key. Defaults to `process.env.PAYLOAD_SECRET`. */
   getSecret?: () => string
@@ -88,7 +97,13 @@ export function encryptedField(name: string, options: EncryptedFieldOptions = {}
           // silently overwrite the real secret with an encrypted copy of
           // the mask string.
           if (value === mask) {
-            const table = global?.slug ?? collection?.slug
+            // A collection/global can override its actual SQL table name via
+            // `dbName` (string form only — the function form isn't resolvable
+            // here without the arguments Payload's own schema builder has).
+            // Fall back to the slug, which is what Payload uses when `dbName`
+            // isn't set.
+            const owner = global ?? collection
+            const table = typeof owner?.dbName === "string" ? owner.dbName : owner?.slug
             if (!table) return value
             const id = (originalDoc as { id?: string | number } | undefined)?.id
             return readRawColumn(req.payload, table, column, id)
