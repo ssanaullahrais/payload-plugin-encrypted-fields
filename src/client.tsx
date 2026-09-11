@@ -22,13 +22,19 @@ export function EncryptedFieldInput({
   const [touched, setTouched] = React.useState(false)
   const hasSavedValue = Boolean(initialValue)
   const label = field?.label ?? field?.name ?? "Secret"
+  const adminWidth = field?.admin?.width
+  const rowWidth =
+    typeof adminWidth === "string" && adminWidth.endsWith("%")
+      ? `calc(${adminWidth} - 10px)`
+      : adminWidth
 
   return (
     <div
       className="field-type text"
       style={{
+        flexBasis: rowWidth,
         marginBottom: 0,
-        width: field?.admin?.width ?? "100%",
+        width: rowWidth ?? "100%",
       }}
     >
       <FieldLabel label={label} path={path} />
