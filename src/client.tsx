@@ -47,7 +47,7 @@ export function EncryptedFieldInput({
           color: "inherit",
         }}
       />
-      {field?.admin?.description ? (
+      {field?.admin?.description && path ? (
         <FieldDescription description={field.admin.description} path={path} />
       ) : null}
     </div>
