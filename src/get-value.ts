@@ -4,7 +4,7 @@ import { decryptValue } from "./crypto"
 import { readRawColumn } from "./table"
 
 export interface GetEncryptedValueOptions {
-  /** The collection or global's slug (its Postgres table name). */
+  /** The collection or global's slug (its database table name). */
   table: string
   /** DB column name — see `encryptedField`'s `column` option for the default naming. */
   column: string
@@ -15,7 +15,7 @@ export interface GetEncryptedValueOptions {
 }
 
 /**
- * Reads and decrypts a real secret value directly from Postgres, bypassing
+ * Reads and decrypts a real secret value directly from the database, bypassing
  * Payload's field hooks and access control entirely (`encryptedField()`'s
  * `afterRead` always returns a masked placeholder, on purpose — the real
  * value never comes back through any normal Payload read path). This is

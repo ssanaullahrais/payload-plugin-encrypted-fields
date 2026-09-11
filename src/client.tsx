@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useField, FieldLabel } from "@payloadcms/ui"
+import { FieldDescription, FieldLabel, useField } from "@payloadcms/ui"
 
 /**
  * Masked `<input type="password">` for fields built with `encryptedField()`.
@@ -16,7 +16,7 @@ export function EncryptedFieldInput({
   field,
 }: {
   path?: string
-  field?: { label?: string; name?: string }
+  field?: { admin?: { description?: string }; label?: string; name?: string }
 }) {
   const { value, setValue, initialValue } = useField<string>({ path })
   const [touched, setTouched] = React.useState(false)
@@ -24,7 +24,7 @@ export function EncryptedFieldInput({
   const label = field?.label ?? field?.name ?? "Secret"
 
   return (
-    <div className="field-type text">
+    <div className="field-type text" style={{ marginBottom: 0, width: "100%" }}>
       <FieldLabel label={label} path={path} />
       <input
         type="password"
@@ -36,6 +36,9 @@ export function EncryptedFieldInput({
           setValue(event.target.value)
         }}
         style={{
+          appearance: "none",
+          boxSizing: "border-box",
+          minHeight: 40,
           width: "100%",
           padding: "8px 12px",
           borderRadius: 4,
@@ -44,6 +47,9 @@ export function EncryptedFieldInput({
           color: "inherit",
         }}
       />
+      {field?.admin?.description ? (
+        <FieldDescription description={field.admin.description} path={path} />
+      ) : null}
     </div>
   )
 }

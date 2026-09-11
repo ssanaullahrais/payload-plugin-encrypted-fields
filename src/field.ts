@@ -9,6 +9,8 @@ export interface EncryptedFieldOptions {
   admin?: {
     description?: string
     condition?: Condition
+    /** Normal Payload admin field width, e.g. "50%" inside a row. */
+    width?: string
   }
   /** Defaults to admin-only (`req.user?.role === "admin"` if a `role` field exists, else any logged-in user). */
   access?: {
@@ -32,7 +34,7 @@ function defaultGetSecret(): string {
 
 /**
  * A `text` field for secrets (API tokens, credentials) that's encrypted at
- * rest in Postgres and — critically — never decrypted back out through any
+ * rest in the database and — critically — never decrypted back out through any
  * Payload read path: REST, GraphQL, the Local API, or the admin UI's own
  * network responses, even for an authenticated admin. Reads always return
  * either nothing or the `mask` placeholder, so the real value never appears
@@ -45,7 +47,7 @@ function defaultGetSecret(): string {
  * this field (and Payload's access control) on purpose. That's the one
  * deliberate, narrow exception — not a general-purpose read path.
  *
- * Requires the Postgres adapter (`@payloadcms/db-postgres`).
+ * Supports Payload's Postgres adapter and SQLite adapter.
  */
 export function encryptedField(name: string, options: EncryptedFieldOptions = {}): TextField {
   const mask = options.mask ?? DEFAULT_SECRET_MASK
@@ -59,6 +61,7 @@ export function encryptedField(name: string, options: EncryptedFieldOptions = {}
     admin: {
       description: options.admin?.description ?? "Stored encrypted at rest — never returned in plaintext, even to admins.",
       condition: options.admin?.condition,
+      width: options.admin?.width,
       // Masked <input type="password">-style field rather than Payload's
       // default plain-text rendering — see src/client.tsx.
       components: {

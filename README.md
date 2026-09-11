@@ -10,7 +10,7 @@ Instead, you will only ever see a hidden placeholder like this: `•••••
 
 If you need the real value in your own code (for example, to call a third party API), you can read it using a special function called `getEncryptedValue()`. This only works on your server, never in the browser.
 
-This plugin needs the Postgres adapter (`@payloadcms/db-postgres`) to work.
+This plugin works with Payload's Postgres adapter (`@payloadcms/db-postgres`) and SQLite adapter (`@payloadcms/db-sqlite`).
 
 ## When should you use this
 
@@ -81,7 +81,10 @@ export const Settings: GlobalConfig = {
   fields: [
     encryptedField("cloudflareApiToken", {
       label: "Cloudflare API Token",
-      admin: { description: "..." },
+      admin: {
+        description: "...",
+        width: "50%",
+      },
     }),
   ],
 }
@@ -121,6 +124,7 @@ You can pass these options into `encryptedField(name, options)`:
 | `label` | none | The label shown for the field |
 | `admin.description` | a general note | Helper text shown in the admin panel |
 | `admin.condition` | none | A normal Payload field condition |
+| `admin.width` | none | A normal Payload admin width, for example `"50%"` inside a row |
 | `access.read` | any logged in user | Controls who is allowed to even see the mask |
 | `column` | field name in snake_case | Lets you rename the database column |
 | `getSecret` | reads `process.env.PAYLOAD_SECRET` | Where the encryption key comes from |
