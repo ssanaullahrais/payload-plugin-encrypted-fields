@@ -42,6 +42,12 @@ export async function readRawColumn(
   column: string,
   id?: string | number
 ): Promise<string | null> {
+  // Payload derives SQL table names from collection/global slugs via the same
+  // camelCase/kebab-case -> snake_case conversion (e.g. slug "site-layout" ->
+  // table "site_layout"). Normalize here so callers can keep passing the raw
+  // slug instead of every call site re-deriving the table name itself.
+  table = camelToSnakeCase(table)
+
   assertIdentifier(table, "table")
   assertIdentifier(column, "column")
 
