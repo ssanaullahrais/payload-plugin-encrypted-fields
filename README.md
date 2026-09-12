@@ -1,17 +1,39 @@
 # Payload Plugin - Encrypted Global Fields
 
-This is a field type for Payload CMS. It lets you store secrets safely, like API keys or passwords.
+This is a field type and config plugin for Payload CMS. It lets you store secrets safely, like API keys, SMTP passwords, Cloudflare tokens, webhook signing secrets, and private integration credentials.
 
 ## What it does
 
 Once you save a value in this field, it gets encrypted and saved in the database. After that, the real value is never shown again. Not in the REST API. Not in GraphQL. Not in the Local API. Not even in the admin panel for a logged in admin.
 
-Instead, you will only ever see a hidden placeholder like this: `••••••••••••`
+Instead, normal reads return a safe placeholder. By default that placeholder is dots: `••••••••••••••••••••`. If you want API consumers to see a clearer configured/not-configured message, set `apiPlaceholder`, for example `Cloudflare API Token available`.
 
 If you need the real value in your own code (for example, to call a third party API), you can read it using a special function called `getEncryptedValue()`. This only works on your server, never in the browser.
 For secrets that should not even return a masked placeholder, set `hidden: true`. That hides the field in the admin UI and defaults field-level `access.read` to `() => false`, so normal Payload reads do not return the field at all.
 
 This plugin works with Payload's Postgres adapter (`@payloadcms/db-postgres`) and SQLite adapter (`@payloadcms/db-sqlite`).
+
+## Try the Demo App
+
+This repo includes a complete Payload + SQLite demo app in `examples/payload-sqlite`. It is committed for testing and documentation, but it is not shipped in the npm package.
+
+From the plugin root:
+
+```sh
+npm install
+npm run demo
+```
+
+The command packs this plugin, installs the tarball into the example app, seeds demo data, and starts Payload.
+
+Demo login:
+
+```txt
+admin@admin.com
+password
+```
+
+The demo uses obvious values like `cloudflare-token-123456`, `smtp-password-123456`, and `hidden-secret-123456` so you can clearly see the difference between normal API placeholders and protected plaintext reads.
 
 ## When should you use this
 
@@ -35,7 +57,9 @@ This also means less risk of a mistake. You do not have to remember to hide the 
 ## How this keeps your data secure
 
 - **The real value is encrypted before it is saved.** Nothing is ever stored in plain text in the database.
-- **The real value is never sent back out**, not through REST, not through GraphQL, not through the Local API, and not through the admin panel's own network requests. Even a logged in admin only ever sees a masked placeholder like `••••••••••••` once a value is saved.
+- **The real value is never sent back out**, not through REST, not through GraphQL, not through the Local API, and not through the admin panel's own network requests. Even a logged in admin only ever sees a placeholder once a value is saved.
+- **The admin field keeps the familiar visual placeholder.** A saved value appears as `•••••••••••••••••••• (saved — type to replace)` in the admin UI.
+- **The API placeholder is configurable per field.** Leave it alone for dots, or set `apiPlaceholder` to return text like `SMTP Password available`.
 - **Secrets can be fully hidden.** If you set `hidden: true`, the field is hidden from the admin UI and defaults to `access.read: () => false`, so normal reads do not even receive the mask.
 - **Only your own server code can unlock the real value**, using the `getEncryptedValue()` function. This function is not something a browser or a website visitor can ever call. It only works inside your own backend code.
 - **Optional custom endpoints are explicit.** If a separate internal service truly needs the plaintext over HTTP, you can opt into a custom endpoint and provide its access rule yourself. There is no permissive default for these endpoints.
@@ -57,11 +81,10 @@ export default buildConfig({
           tab: "API",
           insertAfter: "someExistingFieldName",
           fields: [
-            { name: "cloudflareAccountId", label: "Cloudflare Account ID" },
             {
               name: "cloudflareApiToken",
               label: "Cloudflare API Token",
-              hidden: true,
+              apiPlaceholder: "Cloudflare API Token available",
             },
           ],
         },
@@ -88,6 +111,7 @@ export const Settings: GlobalConfig = {
   fields: [
     encryptedField("cloudflareApiToken", {
       label: "Cloudflare API Token",
+      apiPlaceholder: "Cloudflare API Token available",
       admin: {
         description: "...",
         width: "50%",
@@ -112,6 +136,35 @@ const apiToken = await getEncryptedValue(req.payload, {
 
 Please be careful with this value. Never send it back out through an API response or anything a browser can read. Only use it inside your own server code, like a background job or a direct call to a third party API.
 
+## Upgrading an Existing Text Field
+
+Yes, you can add this plugin to a field that already has plaintext values.
+
+- Normal reads are masked immediately.
+- Trusted server code can still read the old value with `getEncryptedValue()` during the transition.
+- The next read or save encrypts the old plaintext in place.
+- Saving without touching the field keeps the real value safe instead of saving the placeholder.
+
+Before:
+
+```ts
+{
+  name: "cloudflareApiToken",
+  type: "text",
+}
+```
+
+After:
+
+```ts
+encryptedField("cloudflareApiToken", {
+  label: "Cloudflare API Token",
+  apiPlaceholder: "Cloudflare API Token available",
+})
+```
+
+If the real database column name is different, pass `column`.
+
 ## Reading through a custom endpoint
 
 Most projects should prefer `getEncryptedValue()` inside server code. If you really do need a separate internal service or trusted tool to read a secret over HTTP, opt into an endpoint for that specific field:
@@ -127,6 +180,167 @@ encryptedFieldsPlugin({
           hidden: true,
           endpoint: {
             access: (req) => Boolean(req.user),
+          },
+        },
+      ],
+    },
+  },
+})
+```
+
+## Visual Example
+
+Admin field after a value has been saved:
+
+![Saved encrypted field in Payload admin](./docs/assets/admin-field.png)
+
+Normal REST API response with a default dotted placeholder and custom placeholders:
+
+![Encrypted fields API placeholders](./docs/assets/api-results.png)
+
+## Usage Cases
+
+### Default encrypted field
+
+Use this when you want the field encrypted and never returned as plaintext. The admin UI shows the saved dotted placeholder, and normal API reads return dots by default.
+
+```ts
+{
+  name: "defaultSecret",
+  label: "Default Encrypted Secret",
+}
+```
+
+API response after saving:
+
+```json
+{
+  "defaultSecret": "••••••••••••••••••••"
+}
+```
+
+### Cloudflare API token with a readable API placeholder
+
+Use this when dashboards or integration checks need to know a token exists without receiving the token.
+
+```ts
+{
+  name: "cloudflareApiToken",
+  label: "Cloudflare API Token",
+  apiPlaceholder: "Cloudflare API Token available"
+}
+```
+
+API response after saving:
+
+```json
+{
+  "cloudflareApiToken": "Cloudflare API Token available"
+}
+```
+
+### SMTP password
+
+```ts
+{
+  name: "smtpPassword",
+  label: "SMTP Password",
+  apiPlaceholder: "SMTP Password available"
+}
+```
+
+### Read-only encrypted field
+
+Use this when the secret should be visible as saved in the admin UI but not editable from the admin form. The field is still encrypted, and server/API writes can still update it.
+
+```ts
+{
+  name: "cloudflareApiToken",
+  label: "Cloudflare API Token",
+  apiPlaceholder: "Cloudflare API Token available",
+  admin: {
+    readOnly: true
+  }
+}
+```
+
+You can also use `admin.disabled: true` if that better matches the rest of your Payload config style.
+
+### Hidden endpoint-only secret
+
+Use this for values that should not appear in normal REST, GraphQL, Local API reads, or the admin UI at all.
+
+```ts
+{
+  name: "internalApiToken",
+  label: "Internal API Token",
+  hidden: true,
+  endpoint: {
+    access: ({ user }) => Boolean(user)
+  }
+}
+```
+
+Normal reads omit the field. The explicit endpoint can return the real value when the access rule allows it:
+
+```txt
+GET /api/integrations/{id}/encrypted/internalApiToken
+```
+
+### Clear an existing value
+
+For editable encrypted fields, the admin input shows a `Clear` button once a value exists. Clicking it and saving stores an empty value. After clearing, normal reads return an empty value and a hidden-field endpoint returns `404` because there is no secret to decrypt.
+
+## Complete Example
+
+This example covers the common cases together: default dotted API output, custom API placeholders, admin read-only/disabled fields, and a fully hidden endpoint-only secret.
+
+```ts
+encryptedFieldsPlugin({
+  collections: {
+    "plugin-secrets": {
+      insertAfter: "name",
+      fields: [
+        {
+          name: "defaultSecret",
+          label: "Default Encrypted Secret",
+        },
+        {
+          name: "cloudflareApiToken",
+          label: "Cloudflare API Token",
+          apiPlaceholder: "Cloudflare API Token available",
+          admin: {
+            readOnly: true,
+          },
+          access: {
+            read: () => true,
+          },
+        },
+        {
+          name: "smtpPassword",
+          label: "SMTP Password",
+          apiPlaceholder: "SMTP Password available",
+          access: {
+            read: () => true,
+          },
+        },
+        {
+          name: "webhookSigningSecret",
+          label: "Webhook Signing Secret",
+          apiPlaceholder: "Webhook signing secret configured",
+          admin: {
+            disabled: true,
+          },
+          access: {
+            read: () => true,
+          },
+        },
+        {
+          name: "internalApiToken",
+          label: "Internal API Token",
+          hidden: true,
+          endpoint: {
+            access: ({ user }) => Boolean(user),
           },
         },
       ],
@@ -158,13 +372,16 @@ You can pass these options into `encryptedField(name, options)`. The same option
 | `label` | none | The label shown for the field |
 | `admin.description` | a general note | Helper text shown in the admin panel |
 | `admin.condition` | none | A normal Payload field condition |
+| `admin.disabled` | `false` | Disables editing in the Payload admin UI while still allowing API/server writes |
+| `admin.readOnly` | `false` | Disables editing in the Payload admin UI while still allowing API/server writes |
 | `admin.width` | none | A normal Payload admin width, for example `"50%"` inside a row |
+| `apiPlaceholder` | `••••••••••••••••••••` | The placeholder returned by REST, GraphQL, and Local API reads after a value is saved |
 | `access.read` | any logged in user, or `() => false` when `hidden: true` | Controls who is allowed to even see the mask |
 | `hidden` | `false` | Hides the field from the admin UI and defaults `access.read` to `() => false` |
 | `column` | field name in snake_case | Lets you rename the database column |
 | `endpoint` | none | Plugin-only option that adds an explicit custom endpoint for reading the real value over HTTP |
 | `getSecret` | reads `process.env.PAYLOAD_SECRET` | Where the encryption key comes from |
-| `mask` | `••••••••••••` | The placeholder text shown after a value is saved |
+| `mask` | same as `apiPlaceholder` | Older alias for `apiPlaceholder` |
 
 ## Current status
 

@@ -1,6 +1,6 @@
 import type { Payload } from "payload"
 
-import { decryptValue } from "./crypto.js"
+import { decryptValue, looksLikeEncryptedValue } from "./crypto.js"
 import { readRawColumn } from "./table.js"
 
 export interface GetEncryptedValueOptions {
@@ -37,5 +37,13 @@ export async function getEncryptedValue(payload: Payload, options: GetEncryptedV
     })
 
   const raw = await readRawColumn(payload, options.table, options.column, options.id)
-  return raw ? decryptValue(raw, getSecret()) : null
+  if (!raw) return null
+
+  const decrypted = decryptValue(raw, getSecret())
+  if (decrypted !== null) return decrypted
+
+  // Migration compatibility: if a project adds this plugin to an existing
+  // plaintext field, server-side integrations can still read the old value
+  // until the next Payload read/save migrates it to ciphertext.
+  return looksLikeEncryptedValue(raw) ? null : raw
 }

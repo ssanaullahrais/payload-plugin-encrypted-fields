@@ -1,17 +1,26 @@
 import type { Condition, FieldAccess, TextField } from "payload"
 
-import { encryptValue } from "./crypto.js"
+import { decryptValue, encryptValue, looksLikeEncryptedValue } from "./crypto.js"
 import { DEFAULT_SECRET_MASK } from "./mask.js"
-import { camelToSnakeCase, readRawColumn } from "./table.js"
+import { camelToSnakeCase, readRawColumn, writeRawColumn } from "./table.js"
 
 export interface EncryptedFieldOptions {
   label?: string
   admin?: {
     description?: string
     condition?: Condition
+    /** Disables editing in the Payload admin UI while preserving API/server writes. */
+    disabled?: boolean
+    /** Disables editing in the Payload admin UI while preserving API/server writes. */
+    readOnly?: boolean
     /** Normal Payload admin field width, e.g. "50%" inside a row. */
     width?: string
   }
+  /**
+   * Placeholder returned by reads once a value is saved. Defaults to dots.
+   * Use this for API-friendly messages like "Cloudflare API Token available".
+   */
+  apiPlaceholder?: string
   /**
    * Defaults to any logged-in user (`Boolean(req.user)`) — or, when `hidden`
    * is `true`, to `() => false`. This only gates who can see the masked
@@ -46,8 +55,16 @@ export interface EncryptedFieldOptions {
   column?: string
   /** Returns the server-only encryption key. Defaults to `process.env.PAYLOAD_SECRET`. */
   getSecret?: () => string
-  /** Placeholder returned by reads once a value is saved. Defaults to 12 bullet characters. */
+  /**
+   * Alias for `apiPlaceholder`, kept for compatibility.
+   */
   mask?: string
+  /**
+   * When a project adds this plugin to an existing plaintext field, reads
+   * are masked immediately. With this enabled, the plugin also encrypts that
+   * old plaintext in place after reading it. Defaults to `true`.
+   */
+  encryptPlaintextOnRead?: boolean
 }
 
 function defaultGetSecret(): string {
@@ -76,9 +93,10 @@ function defaultGetSecret(): string {
  * Supports Payload's Postgres adapter and SQLite adapter.
  */
 export function encryptedField(name: string, options: EncryptedFieldOptions = {}): TextField {
-  const mask = options.mask ?? DEFAULT_SECRET_MASK
+  const mask = options.apiPlaceholder ?? options.mask ?? DEFAULT_SECRET_MASK
   const getSecret = options.getSecret ?? defaultGetSecret
   const column = options.column ?? camelToSnakeCase(name)
+  const encryptPlaintextOnRead = options.encryptPlaintextOnRead ?? true
 
   return {
     name,
@@ -87,6 +105,8 @@ export function encryptedField(name: string, options: EncryptedFieldOptions = {}
     admin: {
       description: options.admin?.description ?? "Stored encrypted at rest — never returned in plaintext, even to admins.",
       condition: options.admin?.condition,
+      disabled: options.admin?.disabled,
+      readOnly: options.admin?.readOnly ?? options.admin?.disabled,
       width: options.admin?.width,
       hidden: options.hidden,
       // Masked <input type="password">-style field rather than Payload's
@@ -100,7 +120,21 @@ export function encryptedField(name: string, options: EncryptedFieldOptions = {}
     },
     hooks: {
       afterRead: [
-        ({ value }) => (typeof value === "string" && value.length > 0 ? mask : value),
+        async ({ value, req, collection, global, data }) => {
+          if (typeof value !== "string" || value.length === 0) return value
+
+          const secret = getSecret()
+          if (decryptValue(value, secret) !== null) return mask
+          if (!encryptPlaintextOnRead) return mask
+
+          const owner = global ?? collection
+          const table = typeof owner?.dbName === "string" ? owner.dbName : owner?.slug
+          if (!table) return mask
+
+          const id = (data as { id?: string | number } | undefined)?.id
+          await writeRawColumn(req.payload, table, column, encryptValue(value, secret), id)
+          return mask
+        },
       ],
       beforeChange: [
         async ({ value, req, collection, global, originalDoc }) => {
@@ -124,7 +158,11 @@ export function encryptedField(name: string, options: EncryptedFieldOptions = {}
             const table = typeof owner?.dbName === "string" ? owner.dbName : owner?.slug
             if (!table) return value
             const id = (originalDoc as { id?: string | number } | undefined)?.id
-            return readRawColumn(req.payload, table, column, id)
+            const raw = await readRawColumn(req.payload, table, column, id)
+            if (typeof raw === "string" && raw.length > 0 && !looksLikeEncryptedValue(raw)) {
+              return encryptValue(raw, getSecret())
+            }
+            return raw
           }
           if (typeof value !== "string" || !value) return value
           return encryptValue(value, getSecret())

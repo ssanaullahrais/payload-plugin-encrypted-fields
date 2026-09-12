@@ -1,1 +1,1 @@
-export const DEFAULT_SECRET_MASK = "••••••••••••"
+export const DEFAULT_SECRET_MASK = "••••••••••••••••••••"

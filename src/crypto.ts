@@ -1,6 +1,7 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto"
 
 const IV_LENGTH = 12 // AES-GCM standard nonce size
+const ENCRYPTED_VALUE_PATTERN = /^[0-9a-f]+:[0-9a-f]+:[0-9a-f]+$/i
 
 function getKey(secret: string): Buffer {
   return createHash("sha256").update(secret).digest()
@@ -26,4 +27,12 @@ export function decryptValue(stored: string, secret: string): string | null {
   } catch {
     return null
   }
+}
+
+export function isEncryptedValue(stored: string, secret: string): boolean {
+  return decryptValue(stored, secret) !== null
+}
+
+export function looksLikeEncryptedValue(stored: string): boolean {
+  return stored.split(":").length === 3 && ENCRYPTED_VALUE_PATTERN.test(stored)
 }

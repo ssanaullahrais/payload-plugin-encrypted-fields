@@ -81,3 +81,45 @@ export async function readRawColumn(
     "payload-plugin-encrypted-fields: readRawColumn() requires a supported Payload database adapter. Expected payload.db.pool (Postgres) or payload.db.client (SQLite)."
   )
 }
+
+export async function writeRawColumn(
+  payload: Payload,
+  table: string,
+  column: string,
+  value: string | null,
+  id?: string | number
+): Promise<void> {
+  table = camelToSnakeCase(table)
+
+  assertIdentifier(table, "table")
+  assertIdentifier(column, "column")
+
+  const db = payload.db as unknown as {
+    client?: QueryableSQLiteClient
+    pool?: QueryablePool
+  }
+
+  if (db.pool) {
+    const query =
+      id === undefined
+        ? { text: `UPDATE "${table}" SET "${column}" = $1`, values: [value] }
+        : { text: `UPDATE "${table}" SET "${column}" = $1 WHERE id = $2`, values: [value, id] }
+
+    await db.pool.query<Record<string, unknown>>(query)
+    return
+  }
+
+  if (db.client) {
+    const query =
+      id === undefined
+        ? { sql: `UPDATE "${table}" SET "${column}" = ?`, args: [value] }
+        : { sql: `UPDATE "${table}" SET "${column}" = ? WHERE id = ?`, args: [value, id] }
+
+    await db.client.execute(query)
+    return
+  }
+
+  throw new Error(
+    "payload-plugin-encrypted-fields: writeRawColumn() requires a supported Payload database adapter. Expected payload.db.pool (Postgres) or payload.db.client (SQLite)."
+  )
+}

@@ -30,6 +30,8 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "demo": "npm run demo:prepare && npm --prefix examples/payload-sqlite run demo",
+    "demo:prepare": "npm pack --pack-destination examples/payload-sqlite && npm --prefix examples/payload-sqlite install ./payload-plugin-encrypted-fields-0.1.0.tgz",
     "prepack": "npm run build"
   },
   "peerDependencies": {
