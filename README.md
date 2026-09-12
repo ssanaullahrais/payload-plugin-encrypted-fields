@@ -2,6 +2,8 @@
 
 This is a field type and config plugin for Payload CMS. It lets you store secrets safely, like API keys, SMTP passwords, Cloudflare tokens, webhook signing secrets, and private integration credentials.
 
+![Global settings encrypted fields in Payload admin](docs/assets/global-settings-admin.png)
+
 ## What it does
 
 Once you save a value in this field, it gets encrypted and saved in the database. After that, the real value is never shown again. Not in the REST API. Not in GraphQL. Not in the Local API. Not even in the admin panel for a logged in admin.
