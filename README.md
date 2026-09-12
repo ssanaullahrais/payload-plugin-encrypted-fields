@@ -190,25 +190,9 @@ encryptedFieldsPlugin({
 
 ## Visual Example
 
-Polished demo homepage included in `examples/payload-sqlite`:
-
-![Encrypted fields demo homepage](./docs/assets/demo-home.png)
-
 Global settings in the Payload admin, showing saved encrypted values, read-only fields, and clear actions:
 
 ![Global settings encrypted fields in Payload admin](./docs/assets/global-settings-admin.png)
-
-Admin field after a value has been saved:
-
-![Saved encrypted field in Payload admin](./docs/assets/admin-field.png)
-
-REST proof page, cropped to the real content area:
-
-![Encrypted fields REST API proof](./docs/assets/rest-api-proof.png)
-
-Normal REST API response with a default dotted placeholder and custom placeholders:
-
-![Encrypted fields API placeholders](./docs/assets/api-results.png)
 
 ## Usage Cases
 
