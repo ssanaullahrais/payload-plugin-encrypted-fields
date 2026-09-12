@@ -1,67 +1,67 @@
-# Payload Blank Template
+# Payload SQLite Demo
 
-This template comes configured with the bare minimum to get started on anything you need.
+This is a ready-to-run Payload CMS demo for `payload-plugin-encrypted-fields`.
 
-## Quick start
+It uses SQLite, seeds demo data automatically, and does not require a committed `.env` file. The demo is included in GitHub so you can test the plugin quickly before installing it in your own Payload project.
 
-This template can be deployed directly from our Cloud hosting and it will setup MongoDB and cloud S3 object storage for media.
+## Run It
 
-## Quick Start - local setup
+From this folder:
 
-To spin up this template locally, follow these steps:
+```sh
+npm install
+npm run dev
+```
 
-### Clone
+`npm run demo` also works. It is an alias for `npm run dev`.
 
-After you click the `Deploy` button above, you'll want to have standalone copy of this repo on your machine. If you've already cloned this repo, skip to [Development](#development).
+The dev command will:
 
-### Development
+- create/use a local SQLite database
+- set a safe demo `PAYLOAD_SECRET` automatically
+- seed the default admin user
+- seed collection and global secret examples
+- start the Payload/Next dev server
+- open the browser automatically
 
-1. First [clone the repo](#clone) if you have not done so already
-2. `cd my-project && cp .env.example .env` to copy the example environment variables. You'll need to add the `MONGODB_URL` from your Cloud project to your `.env` if you want to use S3 storage and the MongoDB database that was created for you.
+If port `3001` is busy, the demo picks the next available port.
 
-3. `pnpm install && pnpm dev` to install dependencies and start the dev server
-4. open `http://localhost:3000` to open the app in your browser
+## Login
 
-That's it! Changes made in `./src` will be reflected in your app. Follow the on-screen instructions to login and create your first admin user. Then check out [Production](#production) once you're ready to build and serve your app, and [Deployment](#deployment) when you're ready to go live.
+```txt
+Email: admin@admin.com
+Password: password
+```
 
-#### Docker (Optional)
+## What To Check
 
-If you prefer to use Docker for local development instead of a local MongoDB instance, the provided docker-compose.yml file can be used.
+Open the admin panel and inspect:
 
-To do so, follow these steps:
+- `Plugin Secrets` collection
+- `Plugin Settings` global
 
-- Modify the `MONGODB_URL` in your `.env` file to `mongodb://127.0.0.1/<dbname>`
-- Modify the `docker-compose.yml` file's `MONGODB_URL` to match the above `<dbname>`
-- Run `docker-compose up` to start the database, optionally pass `-d` to run in the background.
+The demo includes realistic secret examples:
 
-## How it works
+- Cloudflare API token
+- SMTP password
+- webhook signing secret
+- hidden token
+- read-only encrypted field
 
-The Payload config is tailored specifically to the needs of most websites. It is pre-configured in the following ways:
+Normal API responses show safe placeholders instead of the real secret values. Protected demo endpoints show that trusted backend code can still retrieve the real encrypted value when needed.
 
-### Collections
+## Useful URLs
 
-See the [Collections](https://payloadcms.com/docs/configuration/collections) docs for details on how to extend this functionality.
+The exact port may change if `3001` is already busy.
 
-- #### Users (Authentication)
+```txt
+Frontend: http://localhost:3001
+Admin:    http://localhost:3001/admin
+```
 
-  Users are auth-enabled collections that have access to the admin panel.
+## Notes
 
-  For additional help, see the official [Auth Example](https://github.com/payloadcms/payload/tree/3.x/examples/auth) or the [Authentication](https://payloadcms.com/docs/authentication/overview#authentication-overview) docs.
-
-- #### Media
-
-  This is the uploads enabled collection. It features pre-configured sizes, focal point and manual resizing to help you manage your pictures.
-
-### Docker
-
-Alternatively, you can use [Docker](https://www.docker.com) to spin up this template locally. To do so, follow these steps:
-
-1. Follow [steps 1 and 2 from above](#development), the docker-compose file will automatically use the `.env` file in your project root
-1. Next run `docker-compose up`
-1. Follow [steps 4 and 5 from above](#development) to login and create your first admin user
-
-That's it! The Docker instance will help you get up and running quickly while also standardizing the development environment across your teams.
-
-## Questions
-
-If you have any issues or questions, reach out to us on [Discord](https://discord.com/invite/payload) or start a [GitHub discussion](https://github.com/payloadcms/payload/discussions).
+- `.env` is optional for this demo.
+- `.env.example` is included only as documentation.
+- Generated SQLite database files are ignored by Git.
+- This demo uses the published npm package version from `package.json`.
