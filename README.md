@@ -35,6 +35,12 @@ The demo seeds clear test values like `cloudflare-token-123456`, `smtp-password-
 
 ## Quick Start
 
+Install:
+
+```sh
+npm install payload-plugin-encrypted-fields
+```
+
 Add the plugin to `payload.config.ts`.
 
 ```ts

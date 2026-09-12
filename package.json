@@ -1,10 +1,27 @@
 {
   "name": "payload-plugin-encrypted-fields",
   "version": "0.1.0",
-  "description": "Payload CMS field type for storing third-party API credentials encrypted at rest, that never return the real value through any read path (REST/GraphQL/Local API/admin UI) once saved — only a masked placeholder or the decrypted value read back internally by your own server code.",
+  "description": "Payload CMS plugin for encrypted secret fields that hide real values from admin screens and normal API responses.",
   "license": "MIT",
-  "private": true,
   "type": "module",
+  "keywords": [
+    "payload",
+    "payloadcms",
+    "payload-plugin",
+    "encrypted-fields",
+    "secrets",
+    "cms",
+    "sqlite",
+    "postgres"
+  ],
+  "homepage": "https://github.com/ssanaullahrais/payload-plugin-encrypted-fields#readme",
+  "bugs": {
+    "url": "https://github.com/ssanaullahrais/payload-plugin-encrypted-fields/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ssanaullahrais/payload-plugin-encrypted-fields.git"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -28,6 +45,9 @@
     "dist",
     "README.md"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "demo": "npm run demo:prepare && npm --prefix examples/payload-sqlite run demo",
