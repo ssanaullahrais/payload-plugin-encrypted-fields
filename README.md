@@ -1,7 +1,6 @@
 # Payload Plugin - Encrypted Fields
 
 [![npm version](https://img.shields.io/npm/v/payload-plugin-encrypted-fields.svg)](https://www.npmjs.com/package/payload-plugin-encrypted-fields)
-[![npm downloads](https://img.shields.io/npm/dm/payload-plugin-encrypted-fields.svg)](https://www.npmjs.com/package/payload-plugin-encrypted-fields)
 [![GitHub](https://img.shields.io/badge/GitHub-ssanaullahrais%2Fpayload--plugin--encrypted--fields-181717?logo=github)](https://github.com/ssanaullahrais/payload-plugin-encrypted-fields)
 
 Store API keys, SMTP passwords, tokens, and other secrets in Payload CMS without exposing the real value in admin screens or normal API responses.
