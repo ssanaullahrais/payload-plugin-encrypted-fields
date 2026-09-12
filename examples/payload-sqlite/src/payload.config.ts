@@ -13,6 +13,9 @@ import { PluginSettings } from './globals/PluginSettings'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
+const demoDatabaseURL = process.env.DATABASE_URL || 'file:./temp-payload-encrypted-fields-sqlite.db'
+const demoPayloadSecret =
+  process.env.PAYLOAD_SECRET || 'payload-plugin-encrypted-fields-demo-secret'
 
 export default buildConfig({
   admin: {
@@ -24,13 +27,13 @@ export default buildConfig({
   collections: [Users, Media, PluginSecrets],
   globals: [PluginSettings],
   editor: lexicalEditor(),
-  secret: process.env.PAYLOAD_SECRET || '',
+  secret: demoPayloadSecret,
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
   db: sqliteAdapter({
     client: {
-      url: process.env.DATABASE_URL || '',
+      url: demoDatabaseURL,
     },
   }),
   sharp,

@@ -1,7 +1,12 @@
 import 'dotenv/config'
-import { getPayload } from 'payload'
 
-import config from '../src/payload.config'
+process.env.DATABASE_URL ||= 'file:./temp-payload-encrypted-fields-sqlite.db'
+process.env.PAYLOAD_SECRET ||= 'payload-plugin-encrypted-fields-demo-secret'
+
+const [{ getPayload }, { default: config }] = await Promise.all([
+  import('payload'),
+  import('../src/payload.config'),
+])
 
 const ADMIN_EMAIL = 'admin@admin.com'
 const ADMIN_PASSWORD = 'password'

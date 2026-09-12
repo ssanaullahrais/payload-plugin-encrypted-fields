@@ -6,8 +6,9 @@
   "type": "module",
   "scripts": {
     "build": "cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" next build",
-    "demo": "npm run seed:demo && npm run dev",
-    "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev",
+    "demo": "npm run dev",
+    "dev": "cross-env NODE_OPTIONS=\"--no-deprecation --import=tsx/esm\" tsx scripts/dev-demo.ts",
+    "dev:next": "cross-env NODE_OPTIONS=--no-deprecation next dev -p 3001",
     "devsafe": "rm -rf .next && cross-env NODE_OPTIONS=--no-deprecation next dev",
     "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
     "generate:types": "cross-env NODE_OPTIONS=--no-deprecation payload generate:types",
@@ -29,7 +30,7 @@
     "graphql": "^16.8.1",
     "next": "16.3.3",
     "payload": "3.89.0",
-    "payload-plugin-encrypted-fields": "0.1.0",
+    "payload-plugin-encrypted-fields": "0.1.1",
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "sharp": "0.34.2"

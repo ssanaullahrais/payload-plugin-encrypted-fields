@@ -24,7 +24,7 @@ This repo includes a Payload + SQLite demo app in `examples/payload-sqlite`. It 
 
 ```sh
 npm install
-npm run demo
+npm run dev
 ```
 
 Demo login:
