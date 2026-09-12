@@ -1,6 +1,6 @@
 {
   "name": "payload-plugin-encrypted-fields",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Payload CMS plugin for encrypted secret fields that hide real values from admin screens and normal API responses.",
   "license": "MIT",
   "type": "module",
