@@ -1,12 +1,15 @@
-export { encryptedField } from "./field"
-export type { EncryptedFieldOptions } from "./field"
+export { encryptedField } from "./field.js"
+export type { EncryptedFieldOptions } from "./field.js"
 
-export { encryptedFieldsPlugin } from "./plugin"
-export type { EncryptedFieldSpec, EncryptedFieldsPluginOptions, EncryptedFieldsTarget } from "./plugin"
+export { encryptedFieldsPlugin } from "./plugin.js"
+export type { EncryptedFieldSpec, EncryptedFieldsPluginOptions, EncryptedFieldsTarget } from "./plugin.js"
 
-export { getEncryptedValue } from "./get-value"
-export type { GetEncryptedValueOptions } from "./get-value"
+export { getEncryptedValue } from "./get-value.js"
+export type { GetEncryptedValueOptions } from "./get-value.js"
 
-export { encryptValue, decryptValue } from "./crypto"
-export { DEFAULT_SECRET_MASK } from "./mask"
-export { camelToSnakeCase, readRawColumn } from "./table"
+export { createEncryptedFieldEndpoint } from "./endpoint.js"
+export type { EncryptedFieldEndpointOptions } from "./endpoint.js"
+
+export { encryptValue, decryptValue } from "./crypto.js"
+export { DEFAULT_SECRET_MASK } from "./mask.js"
+export { camelToSnakeCase, readRawColumn } from "./table.js"

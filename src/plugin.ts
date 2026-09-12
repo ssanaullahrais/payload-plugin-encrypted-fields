@@ -1,9 +1,24 @@
-import type { Config, Field } from "payload"
+import type { CollectionConfig, Config, Endpoint, Field, GlobalConfig } from "payload"
+import { definePlugin } from "payload"
 
-import { encryptedField, type EncryptedFieldOptions } from "./field"
+import { camelToSnakeCase } from "./table.js"
+import { createEncryptedFieldEndpoint, type EncryptedFieldEndpointOptions } from "./endpoint.js"
+import { encryptedField, type EncryptedFieldOptions } from "./field.js"
 
 export interface EncryptedFieldSpec extends EncryptedFieldOptions {
   name: string
+  /**
+   * Also expose this field's real, decrypted value through a custom Payload
+   * endpoint (see https://payloadcms.com/docs/rest-api/overview#custom-endpoints),
+   * mounted at `/api/{slug}/{id}/encrypted/{name}` for a collection or
+   * `/api/globals/{slug}/encrypted/{name}` for a global.
+   *
+   * Omit this entirely if `getEncryptedValue()` from your own server code
+   * (Local API context) is enough — this option only matters when something
+   * outside that process (a separate internal service, an authenticated
+   * internal tool) needs the real value over HTTP instead.
+   */
+  endpoint?: Pick<EncryptedFieldEndpointOptions, "access" | "path" | "getSecret">
 }
 
 export interface EncryptedFieldsTarget {
@@ -22,7 +37,7 @@ export interface EncryptedFieldsTarget {
   insertBefore?: string
 }
 
-export interface EncryptedFieldsPluginOptions {
+export interface EncryptedFieldsPluginOptions extends Record<string, unknown> {
   /** Keyed by collection slug. */
   collections?: Record<string, EncryptedFieldsTarget>
   /** Keyed by global slug. */
@@ -40,20 +55,55 @@ function insertFields(existing: Field[], newFields: Field[], target: EncryptedFi
   return [...existing.slice(0, insertAt), ...newFields, ...existing.slice(insertAt)]
 }
 
-function applyTarget(fields: Field[], target: EncryptedFieldsTarget, ownerSlug: string): Field[] {
-  const newFields = target.fields.map(({ name, ...options }) => encryptedField(name, options))
+function applyFields(fields: Field[], target: EncryptedFieldsTarget, ownerSlug: string): Field[] {
+  const newFields = target.fields.map(({ name, endpoint: _endpoint, ...options }) => encryptedField(name, options))
 
   if (!target.tab) return insertFields(fields, newFields, target)
 
-  const tabsField = fields.find((field): field is Extract<Field, { type: "tabs" }> => field.type === "tabs")
-  const tab = tabsField?.tabs.find((candidate) => "label" in candidate && candidate.label === target.tab)
-  if (!tabsField || !tab) {
+  let didInsert = false
+  const nextFields = fields.map((field) => {
+    if (field.type !== "tabs") return field
+
+    const tabIndex = field.tabs.findIndex((candidate) => "label" in candidate && candidate.label === target.tab)
+    if (tabIndex === -1) return field
+
+    didInsert = true
+    return {
+      ...field,
+      tabs: field.tabs.map((tab, index) => (index === tabIndex ? { ...tab, fields: insertFields(tab.fields, newFields, target) } : tab)),
+    }
+  })
+
+  if (!didInsert) {
     throw new Error(
       `payload-plugin-encrypted-fields: tab "${target.tab}" not found on "${ownerSlug}" — create it in your own config first (this plugin injects into an existing tab, it doesn't create one).`
     )
   }
-  tab.fields = insertFields(tab.fields, newFields, target)
-  return fields
+  return nextFields
+}
+
+/**
+ * Builds the `Endpoint[]` (see https://payloadcms.com/docs/rest-api/overview#custom-endpoints)
+ * for every field on this target that opted into `endpoint`. `table` is the
+ * owning collection/global's real SQL table name — a `dbName` override if
+ * one is set (string form only, matching the same limitation documented on
+ * `encryptedField()`'s `column` option), otherwise its slug.
+ */
+function buildEndpoints(target: EncryptedFieldsTarget, table: string, isCollection: boolean): Endpoint[] {
+  const endpoints: Endpoint[] = []
+  for (const spec of target.fields) {
+    if (!spec.endpoint) continue
+    const column = spec.column ?? camelToSnakeCase(spec.name)
+    endpoints.push(
+      createEncryptedFieldEndpoint(spec.name, {
+        ...spec.endpoint,
+        column,
+        table,
+        isCollection,
+      })
+    )
+  }
+  return endpoints
 }
 
 /**
@@ -61,6 +111,12 @@ function applyTarget(fields: Field[], target: EncryptedFieldsTarget, ownerSlug: 
  * the same way you would `@payloadcms/plugin-seo` or any other official
  * plugin, instead of hand-wiring `encryptedField()` calls into each
  * collection/global's `fields` array yourself.
+ *
+ * Follows the same "spread the existing config, don't replace it" shape
+ * Payload's own "Building Your Own Plugin" guide recommends
+ * (https://payloadcms.com/docs/plugins/build-your-own) — every collection,
+ * global, and its `fields`/`endpoints` arrays are spread before this
+ * plugin's additions, so nothing you already configured is lost.
  *
  * @example
  * ```ts
@@ -71,31 +127,58 @@ function applyTarget(fields: Field[], target: EncryptedFieldsTarget, ownerSlug: 
  *       insertAfter: "aiRenameFile",
  *       fields: [
  *         { name: "cloudflareAccountId", label: "Cloudflare Account ID" },
- *         { name: "cloudflareApiToken", label: "Cloudflare API Token" },
+ *         {
+ *           name: "cloudflareApiToken",
+ *           label: "Cloudflare API Token",
+ *           // Hide it from the admin UI and every normal read path, and
+ *           // only allow it back out through this one narrow endpoint.
+ *           hidden: true,
+ *           endpoint: {
+ *             access: ({ user }) => Boolean(user),
+ *           },
+ *         },
  *       ],
  *     },
  *   },
  * })
  * ```
  */
-export function encryptedFieldsPlugin(options: EncryptedFieldsPluginOptions) {
-  return (config: Config): Config => {
+export const encryptedFieldsPlugin = definePlugin<EncryptedFieldsPluginOptions>({
+  slug: "payload-plugin-encrypted-fields",
+  plugin: ({ collections, config: incomingConfig, globals }) => {
+    const options: EncryptedFieldsPluginOptions = { collections, globals }
+    const config: Config = { ...incomingConfig }
+
     if (options.collections) {
-      config.collections = (config.collections ?? []).map((collection) => {
+      config.collections = (incomingConfig.collections ?? []).map((collection) => {
         const target = options.collections?.[collection.slug]
         if (!target) return collection
-        return { ...collection, fields: applyTarget(collection.fields, target, collection.slug) }
+
+        const table = typeof (collection as CollectionConfig).dbName === "string" ? (collection as CollectionConfig).dbName : collection.slug
+
+        return {
+          ...collection,
+          fields: applyFields(collection.fields, target, collection.slug),
+          endpoints: [...(collection.endpoints || []), ...buildEndpoints(target, table as string, true)],
+        }
       })
     }
 
     if (options.globals) {
-      config.globals = (config.globals ?? []).map((global) => {
+      config.globals = (incomingConfig.globals ?? []).map((global) => {
         const target = options.globals?.[global.slug]
         if (!target) return global
-        return { ...global, fields: applyTarget(global.fields, target, global.slug) }
+
+        const table = typeof (global as GlobalConfig).dbName === "string" ? (global as GlobalConfig).dbName : global.slug
+
+        return {
+          ...global,
+          fields: applyFields(global.fields, target, global.slug),
+          endpoints: [...(global.endpoints || []), ...buildEndpoints(target, table as string, false)],
+        }
       })
     }
 
     return config
-  }
-}
+  },
+})

@@ -1,8 +1,8 @@
 import type { Condition, FieldAccess, TextField } from "payload"
 
-import { encryptValue } from "./crypto"
-import { DEFAULT_SECRET_MASK } from "./mask"
-import { camelToSnakeCase, readRawColumn } from "./table"
+import { encryptValue } from "./crypto.js"
+import { DEFAULT_SECRET_MASK } from "./mask.js"
+import { camelToSnakeCase, readRawColumn } from "./table.js"
 
 export interface EncryptedFieldOptions {
   label?: string
@@ -12,10 +12,27 @@ export interface EncryptedFieldOptions {
     /** Normal Payload admin field width, e.g. "50%" inside a row. */
     width?: string
   }
-  /** Defaults to any logged-in user (`Boolean(req.user)`). This only gates who can see the masked placeholder — the real value never comes back through this field regardless of access. */
+  /**
+   * Defaults to any logged-in user (`Boolean(req.user)`) — or, when `hidden`
+   * is `true`, to `() => false`. This only gates who can see the masked
+   * placeholder — the real value never comes back through this field
+   * regardless of access.
+   */
   access?: {
     read?: FieldAccess
   }
+  /**
+   * Remove the field from the admin UI and from every read path (REST,
+   * GraphQL, Local API) entirely — not even the mask comes back. Use this
+   * for secrets nobody should browse to, ever; pair it with an
+   * `endpoint` (see `EncryptedFieldSpec` on `encryptedFieldsPlugin`) or
+   * `getEncryptedValue()` for the one deliberate way to read the real value
+   * back out server-side.
+   *
+   * Defaults `access.read` to `() => false` (override it if you need some
+   * other narrow read rule instead of full hiding).
+   */
+  hidden?: boolean
   /**
    * DB column name override — defaults to the snake_case of the field name.
    *
@@ -71,6 +88,7 @@ export function encryptedField(name: string, options: EncryptedFieldOptions = {}
       description: options.admin?.description ?? "Stored encrypted at rest — never returned in plaintext, even to admins.",
       condition: options.admin?.condition,
       width: options.admin?.width,
+      hidden: options.hidden,
       // Masked <input type="password">-style field rather than Payload's
       // default plain-text rendering — see src/client.tsx.
       components: {
@@ -78,7 +96,7 @@ export function encryptedField(name: string, options: EncryptedFieldOptions = {}
       },
     },
     access: {
-      read: options.access?.read ?? (({ req }) => Boolean(req.user)),
+      read: options.access?.read ?? (options.hidden ? () => false : ({ req }) => Boolean(req.user)),
     },
     hooks: {
       afterRead: [

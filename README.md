@@ -9,6 +9,7 @@ Once you save a value in this field, it gets encrypted and saved in the database
 Instead, you will only ever see a hidden placeholder like this: `••••••••••••`
 
 If you need the real value in your own code (for example, to call a third party API), you can read it using a special function called `getEncryptedValue()`. This only works on your server, never in the browser.
+For secrets that should not even return a masked placeholder, set `hidden: true`. That hides the field in the admin UI and defaults field-level `access.read` to `() => false`, so normal Payload reads do not return the field at all.
 
 This plugin works with Payload's Postgres adapter (`@payloadcms/db-postgres`) and SQLite adapter (`@payloadcms/db-sqlite`).
 
@@ -35,7 +36,9 @@ This also means less risk of a mistake. You do not have to remember to hide the 
 
 - **The real value is encrypted before it is saved.** Nothing is ever stored in plain text in the database.
 - **The real value is never sent back out**, not through REST, not through GraphQL, not through the Local API, and not through the admin panel's own network requests. Even a logged in admin only ever sees a masked placeholder like `••••••••••••` once a value is saved.
+- **Secrets can be fully hidden.** If you set `hidden: true`, the field is hidden from the admin UI and defaults to `access.read: () => false`, so normal reads do not even receive the mask.
 - **Only your own server code can unlock the real value**, using the `getEncryptedValue()` function. This function is not something a browser or a website visitor can ever call. It only works inside your own backend code.
+- **Optional custom endpoints are explicit.** If a separate internal service truly needs the plaintext over HTTP, you can opt into a custom endpoint and provide its access rule yourself. There is no permissive default for these endpoints.
 - **The encryption key comes from your `PAYLOAD_SECRET`**, which is a private value that only lives on your server, not in your code or in the database.
 - **Editing is safe too.** If someone opens a document and saves it without touching the secret field, the plugin is smart enough to keep the original encrypted value safe, instead of accidentally overwriting it with the masked placeholder text.
 
@@ -55,7 +58,11 @@ export default buildConfig({
           insertAfter: "someExistingFieldName",
           fields: [
             { name: "cloudflareAccountId", label: "Cloudflare Account ID" },
-            { name: "cloudflareApiToken", label: "Cloudflare API Token" },
+            {
+              name: "cloudflareApiToken",
+              label: "Cloudflare API Token",
+              hidden: true,
+            },
           ],
         },
       },
@@ -105,6 +112,33 @@ const apiToken = await getEncryptedValue(req.payload, {
 
 Please be careful with this value. Never send it back out through an API response or anything a browser can read. Only use it inside your own server code, like a background job or a direct call to a third party API.
 
+## Reading through a custom endpoint
+
+Most projects should prefer `getEncryptedValue()` inside server code. If you really do need a separate internal service or trusted tool to read a secret over HTTP, opt into an endpoint for that specific field:
+
+```ts
+encryptedFieldsPlugin({
+  collections: {
+    integrations: {
+      fields: [
+        {
+          name: "apiToken",
+          label: "API Token",
+          hidden: true,
+          endpoint: {
+            access: (req) => Boolean(req.user),
+          },
+        },
+      ],
+    },
+  },
+})
+```
+
+For collections, the default endpoint is `GET /api/{collectionSlug}/{id}/encrypted/{fieldName}`. For globals, the default endpoint is `GET /api/globals/{globalSlug}/encrypted/{fieldName}`.
+
+Custom endpoints return the real plaintext value, so the `access` function is required. Keep that rule narrow and only enable endpoints for fields that genuinely need an HTTP read path.
+
 ## Why this plugin does things a certain way
 
 You might think the field could just check "if the value looks like the mask, keep the old value." But this does not actually work safely.
@@ -117,7 +151,7 @@ To avoid this problem, the plugin reads the real encrypted value straight from t
 
 ## Settings you can use
 
-You can pass these options into `encryptedField(name, options)`:
+You can pass these options into `encryptedField(name, options)`. The same options work inside `encryptedFieldsPlugin()` field specs, plus the plugin-only `endpoint` option.
 
 | Option | Default value | What it does |
 |---|---|---|
@@ -125,8 +159,10 @@ You can pass these options into `encryptedField(name, options)`:
 | `admin.description` | a general note | Helper text shown in the admin panel |
 | `admin.condition` | none | A normal Payload field condition |
 | `admin.width` | none | A normal Payload admin width, for example `"50%"` inside a row |
-| `access.read` | any logged in user | Controls who is allowed to even see the mask |
+| `access.read` | any logged in user, or `() => false` when `hidden: true` | Controls who is allowed to even see the mask |
+| `hidden` | `false` | Hides the field from the admin UI and defaults `access.read` to `() => false` |
 | `column` | field name in snake_case | Lets you rename the database column |
+| `endpoint` | none | Plugin-only option that adds an explicit custom endpoint for reading the real value over HTTP |
 | `getSecret` | reads `process.env.PAYLOAD_SECRET` | Where the encryption key comes from |
 | `mask` | `••••••••••••` | The placeholder text shown after a value is saved |
 

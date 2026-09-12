@@ -1,7 +1,7 @@
 import type { Payload } from "payload"
 
-import { decryptValue } from "./crypto"
-import { readRawColumn } from "./table"
+import { decryptValue } from "./crypto.js"
+import { readRawColumn } from "./table.js"
 
 export interface GetEncryptedValueOptions {
   /** The collection or global's slug (its database table name). */
