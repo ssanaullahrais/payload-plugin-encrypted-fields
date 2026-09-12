@@ -1,5 +1,10 @@
 # Payload Plugin - Encrypted Fields
 
+[![npm version](https://img.shields.io/npm/v/payload-plugin-encrypted-fields.svg)](https://www.npmjs.com/package/payload-plugin-encrypted-fields)
+[![npm downloads](https://img.shields.io/npm/dm/payload-plugin-encrypted-fields.svg)](https://www.npmjs.com/package/payload-plugin-encrypted-fields)
+[![Publish](https://github.com/ssanaullahrais/payload-plugin-encrypted-fields/actions/workflows/publish.yml/badge.svg)](https://github.com/ssanaullahrais/payload-plugin-encrypted-fields/actions/workflows/publish.yml)
+[![GitHub](https://img.shields.io/badge/GitHub-ssanaullahrais%2Fpayload--plugin--encrypted--fields-181717?logo=github)](https://github.com/ssanaullahrais/payload-plugin-encrypted-fields)
+
 Store API keys, SMTP passwords, tokens, and other secrets in Payload CMS without exposing the real value in admin screens or normal API responses.
 
 ![Global settings encrypted fields in Payload admin](docs/assets/global-settings-admin.png)
@@ -75,6 +80,17 @@ After saving a value:
 ```
 
 The real token is encrypted in the database and is not returned by normal reads.
+
+## Release
+
+This repo publishes to npm from GitHub Actions when you push a version tag:
+
+```sh
+npm version patch
+git push origin main --follow-tags
+```
+
+GitHub needs one repository secret named `NPM_TOKEN` with npm publish access.
 
 ## Add One Field Directly
 
